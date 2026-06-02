@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         EC2_USER = "ubuntu"
-        EC2_HOST = "34.206.52.251"
+        EC2_HOST = "54.84.36.120"
 
         PROJECT_DIR = "/home/ubuntu/fullstack-project"
         BACKEND_DIR = "/home/ubuntu/fullstack-project/backend"
@@ -49,18 +49,18 @@ pipeline {
                 echo "🚀 Deploying to EC2..."
 
                 # Create directories on EC2
-                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@34.206.52.251 "
+                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@54.84.36.120 "
                     mkdir -p /home/ubuntu/fullstack-project/backend &&
                     mkdir -p /home/ubuntu/fullstack-project/frontend/dist
                 "
 
                 # Sync backend
                 rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
-                backend/ ubuntu@34.206.52.251:/home/ubuntu/fullstack-project/backend/
+                backend/ ubuntu@54.84.36.120:/home/ubuntu/fullstack-project/backend/
 
                 # Sync frontend build
                 rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
-                frontend/dist/ ubuntu@34.206.52.251:/home/ubuntu/fullstack-project/frontend/dist/
+                frontend/dist/ ubuntu@54.84.36.120:/home/ubuntu/fullstack-project/frontend/dist/
                 '''
             }
         }
@@ -68,7 +68,7 @@ pipeline {
         stage('Restart Services') {
             steps {
                 sh '''
-                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@34.206.52.251 "
+                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@54.84.36.120 "
                     sudo systemctl daemon-reload || true
                     sudo systemctl restart fastapi || true
                     sudo systemctl restart nginx || true
