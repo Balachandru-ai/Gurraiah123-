@@ -18,7 +18,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/Premchand-96/fullstack-project.git'
+                url: 'https://github.com/Gurraiah123/fullstack-project.git'
             }
         }
 
