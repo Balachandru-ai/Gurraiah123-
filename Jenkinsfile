@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        EC2_USER    = "ubuntu"
-        EC2_HOST    = "54.84.36.120"
+        EC2_USER    = "ec2-user"
+        EC2_HOST    = "13.61.218.154"
 
-        PROJECT_DIR = "/home/ubuntu/fullstack-project"
-        BACKEND_DIR = "/home/ubuntu/fullstack-project/backend"
-        FRONTEND_DIR = "/home/ubuntu/fullstack-project/frontend"
+        PROJECT_DIR  = "/home/ec2-user/Gurraiah123-"
+        BACKEND_DIR  = "/home/ec2-user/Gurraiah123-/backend"
+        FRONTEND_DIR = "/home/ec2-user/Gurraiah123-/frontend"
 
-        SSH_KEY = "/var/lib/jenkins/keys/UbuntuKeypair.pem"
+        SSH_KEY = "/var/lib/jenkins/keys/environment.pem"
     }
 
     stages {
@@ -17,18 +17,16 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Gurraiah123/fullstack-project.git'
+                    url: 'https://github.com/Balachandru-ai/Gurraiah123-.git'
             }
         }
 
-        stage('Build Backend') {
+        stage('Install Backend Dependencies') {
             steps {
                 sh '''
                     cd backend
-
-                    python3 -m venv venv
-                    ./venv/bin/pip install --upgrade pip
-                    ./venv/bin/pip install -r requirements.txt
+                    python3 -m pip install --upgrade pip
+                    pip3 install -r requirements.txt
                 '''
             }
         }
@@ -37,7 +35,6 @@ pipeline {
             steps {
                 sh '''
                     cd frontend
-
                     npm install
                     npm run build
                 '''
@@ -47,13 +44,6 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 sh '''
-                    echo "🚀 Deploying to EC2..."
-
-                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "
-                        mkdir -p $BACKEND_DIR &&
-                        mkdir -p $FRONTEND_DIR/dist
-                    "
-
                     rsync -avz --delete \
                     -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
                     backend/ \
@@ -62,7 +52,7 @@ pipeline {
                     rsync -avz --delete \
                     -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
                     frontend/dist/ \
-                    $EC2_USER@$EC2_HOST:$FRONTEND_DIR/dist/
+                    $EC2_USER@$EC2_HOST:/usr/share/nginx/html/
                 '''
             }
         }
@@ -71,8 +61,6 @@ pipeline {
             steps {
                 sh '''
                     ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "
-                        sudo systemctl daemon-reload
-                        sudo systemctl restart fastapi
                         sudo systemctl restart nginx
                     "
                 '''
@@ -82,11 +70,11 @@ pipeline {
 
     post {
         success {
-            echo '✅ Deployment Successful'
+            echo 'Deployment completed successfully.'
         }
 
         failure {
-            echo '❌ Deployment Failed'
+            echo 'Deployment failed. Check the Jenkins console output for details.'
         }
     }
 }
