@@ -1,20 +1,20 @@
 pipeline {
-    agent any
+    agent {
+        label 'fastapi'
+    }
 
     environment {
-        EC2_USER = "ec2-user"
-        EC2_HOST = "13.61.218.154"
-
         PROJECT_DIR = "/home/ec2-user/Gurraiah123-"
-        BACKEND_DIR = "/home/ec2-user/Gurraiah123-/backend"
-
-        SSH_KEY = "/var/lib/jenkins/keys/environment.pem"
+        BACKEND_DIR = "${PROJECT_DIR}/backend"
+        FRONTEND_DIR = "${PROJECT_DIR}/frontend"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
+                deleteDir()
+
                 git branch: 'main',
                     url: 'https://github.com/Balachandru-ai/Gurraiah123-.git'
             }
@@ -24,8 +24,14 @@ pipeline {
             steps {
                 sh '''
                     cd backend
-                    python3 -m pip install --upgrade pip
-                    python3 -m pip install -r requirements.txt
+
+                    python3 -m venv venv
+
+                    source venv/bin/activate
+
+                    pip install --upgrade pip
+
+                    pip install -r requirements.txt
                 '''
             }
         }
@@ -34,7 +40,9 @@ pipeline {
             steps {
                 sh '''
                     cd frontend
+
                     npm install
+
                     npm run build
                 '''
             }
@@ -43,14 +51,9 @@ pipeline {
         stage('Deploy Backend') {
             steps {
                 sh '''
-                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "
-                        mkdir -p $BACKEND_DIR
-                    "
+                    mkdir -p $BACKEND_DIR
 
-                    rsync -avz --delete \
-                        -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
-                        backend/ \
-                        $EC2_USER@$EC2_HOST:$BACKEND_DIR/
+                    rsync -av --delete backend/ $BACKEND_DIR/
                 '''
             }
         }
@@ -58,38 +61,48 @@ pipeline {
         stage('Deploy Frontend') {
             steps {
                 sh '''
-                    rsync -avz --delete \
-                        -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
-                        frontend/dist/ \
-                        $EC2_USER@$EC2_HOST:/tmp/frontend-dist/
+                    sudo mkdir -p /usr/share/nginx/html
 
-                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "
-                        sudo rm -rf /usr/share/nginx/html/*
-                        sudo cp -r /tmp/frontend-dist/* /usr/share/nginx/html/
-                        sudo systemctl restart nginx
-                    "
+                    sudo rm -rf /usr/share/nginx/html/*
+
+                    sudo cp -r frontend/dist/* /usr/share/nginx/html/
                 '''
             }
         }
 
-        stage('Restart Backend') {
+        stage('Restart Services') {
             steps {
                 sh '''
-                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "
-                        sudo systemctl restart fastapi || true
-                    "
+                    sudo systemctl restart nginx
+
+                    sudo systemctl restart fastapi
+                '''
+            }
+        }
+
+        stage('Verify Services') {
+            steps {
+                sh '''
+                    sudo systemctl status nginx --no-pager
+
+                    sudo systemctl status fastapi --no-pager
                 '''
             }
         }
     }
 
     post {
+
         success {
-            echo 'Deployment completed successfully.'
+            echo '================================='
+            echo 'Deployment Successful'
+            echo '================================='
         }
 
         failure {
-            echo 'Deployment failed. Check the Jenkins console output for details.'
+            echo '================================='
+            echo 'Deployment Failed'
+            echo '================================='
         }
     }
 }
