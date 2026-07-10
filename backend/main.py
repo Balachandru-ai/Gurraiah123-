@@ -19,21 +19,20 @@ def home():
 
 @app.get("/api/users")
 def get_users():
-
     connection = engine.connect()
 
     query = text("SELECT * FROM users")
-
     result = connection.execute(query)
 
     users = []
 
     for row in result:
         users.append({
-            "id": row[0],
-            "name": row[1],
-            "email": row[2],
-            "role": row[3]
+            "id": row.id,
+            "name": row.name,
+            "email": row.email,
+            "department": row.department,
+            "created_at": str(row.created_at)
         })
 
     connection.close()
