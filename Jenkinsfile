@@ -1,108 +1,108 @@
 pipeline {
     agent {
-        label 'fastapi'
-    }
+	lable 'slave'	
+
+	}
 
     environment {
-        PROJECT_DIR = "/home/ec2-user/Gurraiah123-"
-        BACKEND_DIR = "${PROJECT_DIR}/backend"
-        FRONTEND_DIR = "${PROJECT_DIR}/frontend"
+        REGISTRY = '13.53.243.43:8082'
+        IMAGE_NAME = 'gurraiah-app'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        SONAR_HOST = 'http://13.53.243.43:9000'
+
+        NEXUS_CREDENTIALS = credentials('nexus-docker')
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                deleteDir()
-
                 git branch: 'main',
                     url: 'https://github.com/Balachandru-ai/Gurraiah123-.git'
             }
         }
 
-        stage('Install Backend Dependencies') {
+        stage('SonarQube Analysis') {
             steps {
                 sh '''
-                    cd backend
-
-                    python3 -m venv venv
-
-                    source venv/bin/activate
-
-                    pip install --upgrade pip
-
-                    pip install -r requirements.txt
+                    sonar-scanner \
+                      -Dsonar.projectKey=gurraiah-app \
+                      -Dsonar.projectName=gurraiah-app \
+                      -Dsonar.sources=backend,frontend/src \
+                      -Dsonar.host.url=$SONAR_HOST \
+                      -Dsonar.token=$SONAR_TOKEN
                 '''
             }
         }
 
-        stage('Build Frontend') {
+        stage('Docker Build') {
             steps {
                 sh '''
-                    cd frontend
-
-                    npm install
-
-                    npm run build
+                    docker build \
+                      -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG \
+                      -t $REGISTRY/$IMAGE_NAME:latest \
+                      .
                 '''
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Nexus Login') {
             steps {
                 sh '''
-                    mkdir -p $BACKEND_DIR
-
-                    rsync -av --delete backend/ $BACKEND_DIR/
+                    echo "$NEXUS_CREDENTIALS_PSW" | docker login $REGISTRY \
+                      -u "$NEXUS_CREDENTIALS_USR" \
+                      --password-stdin
                 '''
             }
         }
 
-        stage('Deploy Frontend') {
+        stage('Push to Nexus') {
             steps {
                 sh '''
-                    sudo mkdir -p /usr/share/nginx/html
-
-                    sudo rm -rf /usr/share/nginx/html/*
-
-                    sudo cp -r frontend/dist/* /usr/share/nginx/html/
+                    docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+                    docker push $REGISTRY/$IMAGE_NAME:latest
                 '''
             }
         }
 
-        stage('Restart Services') {
+        stage('Deploy Kubernetes') {
             steps {
                 sh '''
-                    sudo systemctl restart nginx
-
-                    sudo systemctl restart fastapi
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
                 '''
             }
         }
 
-        stage('Verify Services') {
+        stage('Restart Deployment') {
             steps {
                 sh '''
-                    sudo systemctl status nginx --no-pager
+                    kubectl rollout restart deployment/gurraiah-app
+                    kubectl rollout status deployment/gurraiah-app --timeout=180s
+                '''
+            }
+        }
 
-                    sudo systemctl status fastapi --no-pager
+        stage('Verify') {
+            steps {
+                sh '''
+                    kubectl get pods
+                    kubectl get svc
+                    kubectl get deployment gurraiah-app
                 '''
             }
         }
     }
 
     post {
-
         success {
-            echo '================================='
-            echo 'Deployment Successful'
-            echo '================================='
+            echo 'Deployment completed successfully!'
         }
 
         failure {
-            echo '================================='
-            echo 'Deployment Failed'
-            echo '================================='
+            echo 'Pipeline failed!'
         }
     }
 }
