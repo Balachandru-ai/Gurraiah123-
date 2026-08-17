@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gurraiah-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gurraiah-app
+  template:
+    metadata:
+      labels:
+        app: gurraiah-app
+    spec:
+      imagePullSecrets:
+        - name: nexus-registry
+
+      containers:
+        - name: gurraiah-app
+          image: 13.53.243.43:8082/gurraiah-app:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80

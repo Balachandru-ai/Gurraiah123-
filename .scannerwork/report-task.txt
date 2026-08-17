@@ -1,0 +1,6 @@
+projectKey=gurraiah-app
+serverUrl=http://16.16.144.49:9000
+serverVersion=26.8.0.126808
+dashboardUrl=http://16.16.144.49:9000/dashboard?id=gurraiah-app
+ceTaskId=f3107b94-2e7d-4bc1-bdd6-2fcfd5bcc84e
+ceTaskUrl=http://16.16.144.49:9000/api/ce/task?id=f3107b94-2e7d-4bc1-bdd6-2fcfd5bcc84e

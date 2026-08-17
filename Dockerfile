@@ -44,7 +44,8 @@ WORKDIR /app
 # Install Nginx
 RUN apt-get update && \
     apt-get install -y --no-install-recommends nginx && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    rm -f /etc/nginx/sites-enabled/default
 
 # Python virtual environment
 COPY --from=backend-builder /opt/venv /opt/venv
